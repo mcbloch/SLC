@@ -16,12 +16,6 @@ import shutil
 
 import logging
 
-# ------------
-# -- CONFig --
-
-# MNT_DIR = "alpine-minirootfs"
-
-
 
 # -------------
 # -- LOGGING --
@@ -67,13 +61,6 @@ logger.addHandler(ch)
 # -- FILE SYSTEM --
 
 libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
-# libc.mount.argtypes = (
-#     ctypes.c_char_p,
-#     ctypes.c_char_p,
-#     ctypes.c_char_p,
-#     ctypes.c_ulong,
-#     ctypes.c_char_p,
-# )
 
 libc.syscall.argtypes = [ctypes.c_int, ctypes.c_int]
 libc.umount.argtypes = [ctypes.c_char_p, ctypes.c_int]
@@ -98,15 +85,14 @@ MNT_DETACH = 2  # from sys/mount.h
 
 
 def sethostname(hostname):
-    ret = libc.sethostname(
-        hostname.encode(), len(hostname)
-    )
+    ret = libc.sethostname(hostname.encode(), len(hostname))
     if ret < 0:
         errno = ctypes.get_errno()
         raise OSError(
             errno,
             f"Error setting hostname {hostname}: {os.strerror(errno)}",
         )
+
 
 def mount(source, target, fs, flags=0, options=""):
     ret = libc.mount(
@@ -139,6 +125,7 @@ def pivot_root(new_root, old_root):
             f"Error pivotting root. Pivot to {new_root}, placing old root at {old_root}: {os.strerror(errno)}",
         )
 
+
 def unsharenamespaces():
     """
     Use Linux namespaces to add the current process to a new UTS (hostname) namespace, new
@@ -146,7 +133,8 @@ def unsharenamespaces():
     """
     unshare(CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWNS)
     sethostname("alpine-container")
-    mount("none", "/", "", MS_REC | MS_PRIVATE) # Not sure why we need this
+    mount("none", "/", "", MS_REC | MS_PRIVATE)  # Not sure why we need this
+
 
 def pivot_root_routine(mnt_dir):
     OLD_ROOT = "./oldroot"
@@ -164,6 +152,7 @@ def pivot_root_routine(mnt_dir):
     # umount(OLD_ROOT)
     # os.rmdir(OLD_ROOT)
 
+
 def mount_proc():
     try:
         os.mkdir("/proc", 755)
@@ -171,21 +160,26 @@ def mount_proc():
         pass
     mount("proc", "/proc", "proc", 0)
 
-cache_dir = '.cache'
-volume_dir = '.volumes'
+
+cache_dir = ".cache"
+volume_dir = ".volumes"
+
 
 def setup_container_volume(def_file):
-    c_name = def_file.split('.')[0]
-    with open(def_file, 'r') as f:
+    c_name = def_file.split(".")[0]
+    with open(def_file, "r") as f:
         lines = f.readlines()
-        if (lines[0][:4] != 'FROM'):
-            print('First line should specify source url: FROM https://.../myimage.tar.gz', file=sys.stderr)
+        if lines[0][:4] != "FROM":
+            print(
+                "First line should specify source url: FROM https://.../myimage.tar.gz",
+                file=sys.stderr,
+            )
         img_source_url = lines[0][5:]
         o = urlparse(img_source_url)
-        img_name = o.path.rsplit('/', 1)[1]
-        img_source_archive_path = cache_dir + '/' + img_name
-        img_source_path = cache_dir + '/' + img_name + "-source"
-        
+        img_name = o.path.rsplit("/", 1)[1]
+        img_source_archive_path = cache_dir + "/" + img_name
+        img_source_path = cache_dir + "/" + img_name + "-source"
+
         # Download image if not exists
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
@@ -193,7 +187,7 @@ def setup_container_volume(def_file):
         if not os.path.exists(img_source_archive_path):
             print(f"Downloading image: {img_name}")
             r = requests.get(o.geturl(), allow_redirects=True)
-            open(img_source_archive_path, 'wb').write(r.content)
+            open(img_source_archive_path, "wb").write(r.content)
         else:
             print(f"Using cached image archive: {img_source_archive_path}")
 
@@ -206,7 +200,7 @@ def setup_container_volume(def_file):
         # Setup volume
         if not os.path.exists(volume_dir):
             os.makedirs(volume_dir)
-        c_volume_path = volume_dir + '/' + c_name
+        c_volume_path = volume_dir + "/" + c_name
         if not os.path.exists(c_volume_path):
             print(f"Extracting image to new volume: {c_volume_path}")
             shutil.unpack_archive(img_source_archive_path, c_volume_path)
@@ -216,17 +210,20 @@ def setup_container_volume(def_file):
 
         return c_volume_path
 
+
 def read_build_file(def_file):
-    with open(def_file, 'r') as f:
+    with open(def_file, "r") as f:
         return f.readlines()
+
 
 def build_container(volume_dir, def_file_content):
     lines = def_file_content
 
     for line in lines[1:]:
-            if line.split(" ")[0] == "RUN":
-                print(f"[I] Build step: RUN {line.split(' ')[1]}", flush=True)
-                subprocess.check_call(line.split(" ")[1:])
+        if line.split(" ")[0] == "RUN":
+            print(f"[I] Build step: RUN {line.split(' ')[1]}", flush=True)
+            subprocess.check_call(line.split(" ")[1:])
+
 
 # --------------------
 # -- PARENT PROCESS --
@@ -244,11 +241,15 @@ def parent():
 
     # Start the subprocess in the namespaces
     proc = subprocess.Popen(
-        [sys.argv[0], "child", mnt_dir, c_def_file] + sys.argv[3:], shell=False, stdin=PIPE, stdout=PIPE, stderr=PIPE
+        [sys.argv[0], "child", mnt_dir, c_def_file] + sys.argv[3:],
+        shell=False,
+        stdin=PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
     )
     print("Started child process (pid: {})".format(proc.pid))
     try:
-        outs, errs = proc.communicate() # timeout = 5
+        outs, errs = proc.communicate()  # timeout = 5
     except TimeoutExpired:
         proc.kill()
         outs, errs = proc.communicate()
@@ -268,19 +269,19 @@ def parent():
 
 def child():
     print(sys.argv)
-    mnt_dir = sys.argv[2] 
+    mnt_dir = sys.argv[2]
     c_def_file = sys.argv[3]
+    command = sys.argv[4:]
 
     c_file_content = read_build_file(c_def_file)
-    pivot_root_routine(sys.argv[2])
+
+    pivot_root_routine(mnt_dir)
     mount_proc()
 
-    build_container(sys.argv[2], c_file_content)
+    build_container(mnt_dir, c_file_content)
 
-    print(f"[I] Running: {sys.argv[4:]}")
-    proc = subprocess.Popen(
-        sys.argv[4:], shell=False, stdin=PIPE, stdout=PIPE, stderr=PIPE
-    )
+    print(f"[I] Running: {command}")
+    proc = subprocess.Popen(command, shell=False, stdin=PIPE, stdout=PIPE, stderr=PIPE)
     print(f"[I] pid: {proc.pid}")
 
     while proc.poll() is None:
@@ -294,7 +295,7 @@ def child():
         print(outs.decode("utf-8"), end="", file=sys.stdout)
         print(errs.decode("utf-8"), end="", file=sys.stderr)
 
-    # outs, errs = proc.communicate()        
+    # outs, errs = proc.communicate()
     # print(outs.decode("utf-8"), end="", file=sys.stdout)
     # print(errs.decode("utf-8"), end="", file=sys.stderr)
 
