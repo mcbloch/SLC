@@ -10,3 +10,7 @@ Why you should not use this
 - No network separation
 - Not safe whatsoever
 - No cached build steps
+
+## Example
+
+    sudo -E ./main.py run alpine.cdef pstree
