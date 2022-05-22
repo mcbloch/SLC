@@ -1,0 +1,12 @@
+https://www.sideproject-generator.com/ :p
+
+https://www.infoq.com/articles/build-a-container-golang/
+
+https://itnext.io/linux-container-from-scratch-339c3ba0411d
+https://github.com/joseims/doqueru-kun/blob/master/steps/pivot_root.cpp
+
+http://tejom.github.io/c/linux/containers/docker/2016/10/04/containers-from-scratch-pt1.html
+
+https://gist.github.com/cocagne/4088467
+
+https://github.com/Delgan/loguru
