@@ -10,6 +10,10 @@ Why you should not use this
 - No network separation
 - Not safe whatsoever
 - No cached build steps
+- Probably full of bugs and unexpected behaviour
+
+Why you should use this
+- CONTAINERS!!
 
 ## Example
 
